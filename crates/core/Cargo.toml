@@ -1,5 +1,5 @@
 [package]
-name = "cargo-core"
+name = "carbon-core"
 rust-version.workspace = true
 version.workspace = true
 edition.workspace = true

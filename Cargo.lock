@@ -615,35 +615,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "carbon-macros"
-version = "0.5.1"
-dependencies = [
- "hex",
- "paste",
- "solana-client",
- "solana-sdk",
- "solana-transaction-status",
-]
-
-[[package]]
-name = "carbon-pro-macros"
-version = "0.5.1"
-dependencies = [
- "borsh-derive-internal",
- "hex",
- "paste",
- "proc-macro2",
- "quote",
- "serde",
- "solana-client",
- "solana-sdk",
- "solana-transaction-status",
- "syn 1.0.109",
- "unicode-xid",
-]
-
-[[package]]
-name = "cargo-core"
+name = "carbon-core"
 version = "0.5.1"
 dependencies = [
  "anyhow",
@@ -669,6 +641,34 @@ dependencies = [
  "solana-transaction-status",
  "solana-zk-sdk",
  "thiserror 1.0.69",
+]
+
+[[package]]
+name = "carbon-macros"
+version = "0.5.1"
+dependencies = [
+ "hex",
+ "paste",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+]
+
+[[package]]
+name = "carbon-pro-macros"
+version = "0.5.1"
+dependencies = [
+ "borsh-derive-internal",
+ "hex",
+ "paste",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "syn 1.0.109",
+ "unicode-xid",
 ]
 
 [[package]]

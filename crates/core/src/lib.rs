@@ -112,16 +112,12 @@
 //! data processing requirements.
 
 pub mod account;
-//pub mod collection;
-//pub mod datasource;
 pub mod deserialize;
 pub mod error;
 pub mod instruction;
 pub mod metrics;
 //pub mod pipeline;
 pub mod processor;
-//pub mod schema;
-//pub mod transaction;
 pub mod transformers;
 pub use borsh;
 #[cfg(feature = "macros")]
