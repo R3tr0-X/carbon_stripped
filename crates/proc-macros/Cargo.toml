@@ -1,5 +1,5 @@
 [package]
-name = "carbon-pro-macros"
+name = "carbon-proc-macros"
 rust-version.workspace = true
 version.workspace = true
 edition.workspace = true
@@ -10,7 +10,6 @@ repository.workspace = true
 proc-macro = true
 
 [dependencies]
-
 solana-client = { workspace = true }
 solana-sdk = { workspace = true }
 solana-transaction-status = { workspace = true }

@@ -6,34 +6,28 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+default = ["macros"]
+macros = ["carbon-macros", "carbon-proc-macros"]
+
 [dependencies]
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+solana-transaction-status = { workspace = true }
 
-solana-sdk.workspace = true
-solana-perf.workspace = true
-solana-client.workspace = true
-solana-account-decoder.workspace = true
-solana-config-program.workspace = true
-solana-metrics.workspace = true
-solana-program.workspace = true
-solana-pubsub-client.workspace = true
-solana-streamer.workspace = true
-solana-transaction-status.workspace = true
-solana-storage-proto.workspace = true
-solana-zk-sdk.workspace = true
-
-
-anyhow.workspace = true
-async-trait.workspace = true
-bincode.workspace = true
-borsh.workspace = true
-borsh-derive-internal.workspace = true
-bs58.workspace = true
-base64.workspace = true
-log.workspace = true
-metrics.workspace = true
+async-trait = { workspace = true }
+borsh = { version = "0.10.4" }
+bs58 = { workspace = true }
+log = { workspace = true }
 serde = { workspace = true }
-thiserror.workspace = true
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+metrics.workspace = true
 
+
+# Optional macro dependencies
+carbon-macros = { workspace = true, optional = true }
+carbon-proc-macros = { workspace = true, optional = true }
 
 
 [lib]
