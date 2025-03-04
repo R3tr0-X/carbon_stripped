@@ -1,0 +1,19 @@
+[package]
+name = "carbon-macros"
+rust-version.workspace = true
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+solana-transaction-status = { workspace = true }
+
+hex = { workspace = true }
+paste = { workspace = true }
+
+[lib]
+crate-type = ["rlib"]
