@@ -23,14 +23,10 @@
 use {
     crate::error::{CarbonResult, Error},
     solana_sdk::{
-        instruction::{AccountMeta, CompiledInstruction},
-        message::{
+        address_lookup_table::instruction, inner_instruction, instruction::{AccountMeta, CompiledInstruction}, message::{
             v0::{LoadedAddresses, LoadedMessage},
             VersionedMessage,
-        },
-        pubkey::Pubkey,
-        reserved_account_keys::ReservedAccountKeys,
-        transaction_context::TransactionReturnData,
+        }, pubkey::Pubkey, reserved_account_keys::ReservedAccountKeys, transaction_context::TransactionReturnData
     },
     solana_transaction_status::{
         option_serializer::OptionSerializer, InnerInstruction, InnerInstructions, Reward,
@@ -232,6 +228,225 @@ pub fn extract_instructions_with_metadata(
 
     Ok(instructions)
 }
+
+
+
+/// Extracts instructions with metadata from a transaction update.
+///
+/// This function parses both top-level and inner instructions, associating them
+/// with metadata such as stack height and account information. It provides a
+/// detailed breakdown of each instruction, useful for further processing.
+///
+/// # Parameters
+///
+/// - `transaction_metadata`: Metadata about the transaction from which
+///   instructions are extracted.
+/// - `transaction_update`: The `TransactionUpdate` containing the transaction's
+///   data and message.
+///
+/// # Returns
+///
+/// A `CarbonResult<Vec<(InstructionMetadata,
+/// solana_sdk::instruction::Instruction)>>` containing instructions along with
+/// their associated metadata.
+///
+/// # Errors
+///
+/// Returns an error if any account metadata required for instruction processing
+/// is missing.
+pub fn extract_instructions_with_ui_metadata(
+    meta: UiTransactionStatusMeta,
+    message: &VersionedMessage,
+) -> CarbonResult<Vec<solana_sdk::instruction::Instruction>> {
+    log::trace!(
+        "extract_instructions_with_metadata(transaction_metadata: {:?}, transaction_update: {:?})",
+        meta,
+        message
+    );
+
+    let mut instructions =
+        Vec::<solana_sdk::instruction::Instruction>::with_capacity(50);
+
+    match message {
+        VersionedMessage::Legacy(legacy) => {
+            for (i, compiled_instruction) in legacy.instructions.iter().enumerate() {
+                let program_id = *legacy
+                    .account_keys
+                    .get(compiled_instruction.program_id_index as usize)
+                    .unwrap_or(&Pubkey::default());
+
+                let accounts: Vec<_> = compiled_instruction
+                    .accounts
+                    .iter()
+                    .filter_map(|account_index| {
+                        let account_pubkey = legacy.account_keys.get(*account_index as usize)?;
+                        Some(AccountMeta {
+                            pubkey: *account_pubkey,
+                            is_writable: legacy.is_maybe_writable(*account_index as usize, None),
+                            is_signer: legacy.is_signer(*account_index as usize),
+                        })
+                    })
+                    .collect();
+
+                instructions.push(
+                    solana_sdk::instruction::Instruction {
+                        program_id,
+                        accounts,
+                        data: compiled_instruction.data.clone(),
+                    }
+                );
+
+                if meta.inner_instructions.is_some() {
+                    let inner_instructions = meta.inner_instructions.clone().unwrap();
+                    for inner_instructions_per_tx in inner_instructions {
+                        if inner_instructions_per_tx.index == i as u8 {
+                            for inner_instruction in inner_instructions_per_tx.instructions.iter() {
+                                match inner_instruction {
+                                    UiInstruction::Compiled(ui_compiled_instruction) => {
+                                        let program_id = *legacy.
+                                        account_keys
+                                        .get(ui_compiled_instruction.program_id_index as usize)
+                                        .unwrap_or(&Pubkey::default());
+
+                                        let accounts = ui_compiled_instruction.accounts.clone();
+
+                                        let accounts_meta: Vec<_> = accounts
+                                            .iter()
+                                            .filter_map(|account_index| {
+                                                let account_pubkey =
+                                                    legacy.account_keys.get(*account_index as usize)?;
+
+                                                Some(AccountMeta {
+                                                    pubkey: *account_pubkey,
+                                                    is_writable: legacy
+                                                        .is_maybe_writable(*account_index as usize, None),
+                                                    is_signer: legacy.is_signer(*account_index as usize),
+                                                })
+                                            })
+                                            .collect();
+
+                                        let decoded_data = bs58::decode(ui_compiled_instruction.data.clone()).into_vec().unwrap();
+                                        instructions.push(
+                                            solana_sdk::instruction::Instruction {
+                                                program_id,
+                                                accounts: accounts_meta,
+                                                data: decoded_data,
+                                            }
+                                        );
+
+                                    },
+                                    _=> {}
+                                };                                
+
+                               
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        VersionedMessage::V0(v0) => {
+            let loaded_addresses = LoadedAddresses {
+                writable: meta.loaded_addresses.clone().unwrap().writable.iter().map(|wr| { Pubkey::from_str_const(wr.as_str() )}).collect(),
+                readonly: meta.loaded_addresses.clone().unwrap().readonly.iter().map(|wr| { Pubkey::from_str_const(wr.as_str() )}).collect(),
+            };
+
+            let loaded_message = LoadedMessage::new(
+                v0.clone(),
+                loaded_addresses,
+                &ReservedAccountKeys::empty_key_set(),
+            );
+
+            for (i, compiled_instruction) in v0.instructions.iter().enumerate() {
+                let program_id = *loaded_message
+                    .account_keys()
+                    .get(compiled_instruction.program_id_index as usize)
+                    .unwrap_or(&Pubkey::default());
+
+                let accounts: Vec<AccountMeta> = compiled_instruction
+                    .accounts
+                    .iter()
+                    .map(|account_index| {
+                        let account_pubkey =
+                            loaded_message.account_keys().get(*account_index as usize);
+
+                        AccountMeta {
+                            pubkey: account_pubkey.copied().unwrap_or_default(),
+                            is_writable: loaded_message.is_writable(*account_index as usize),
+                            is_signer: loaded_message.is_signer(*account_index as usize),
+                        }
+                    })
+                    .collect();
+
+                instructions.push(
+                    solana_sdk::instruction::Instruction {
+                        program_id,
+                        accounts,
+                        data: compiled_instruction.data.clone(),
+                    },
+                );
+
+                
+                if meta.inner_instructions.is_some() {
+                    let inner_instructions = meta.inner_instructions.clone().unwrap();
+                    for inner_instructions_per_tx in inner_instructions {
+                        if inner_instructions_per_tx.index == i as u8 {
+                            for inner_instruction in inner_instructions_per_tx.instructions.iter() {
+                                match inner_instruction {
+                                    UiInstruction::Compiled(ui_compiled_instruction) => {
+                                        let program_id = *loaded_message
+                                        .account_keys()
+                                        .get(ui_compiled_instruction.program_id_index as usize)
+                                        .unwrap_or(&Pubkey::default());
+
+                                        let accounts = ui_compiled_instruction.accounts.clone();   
+
+                                                                            
+
+                                        let accounts_meta: Vec<AccountMeta> = accounts
+                                            .iter()
+                                            .map(|account_index| {
+                                                let account_pubkey = loaded_message
+                                                    .account_keys()
+                                                    .get(*account_index as usize)
+                                                    .copied()
+                                                    .unwrap_or_default();
+
+                                                AccountMeta {
+                                                    pubkey: account_pubkey,
+                                                    is_writable: loaded_message
+                                                        .is_writable(*account_index as usize),
+                                                    is_signer: loaded_message
+                                                        .is_signer(*account_index as usize),
+                                                }
+                                            })
+                                            .collect();
+
+                                            let decoded_data = bs58::decode(ui_compiled_instruction.data.clone()).into_vec().unwrap();
+                                            instructions.push(
+                                                solana_sdk::instruction::Instruction {
+                                                    program_id,
+                                                    accounts: accounts_meta,
+                                                    data: decoded_data
+                                                },
+                                            );                                             
+                                            
+                                    },
+                                   _=> {}
+                                };                               
+                               
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(instructions)
+}
+
+
 
 
 
